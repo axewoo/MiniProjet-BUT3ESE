@@ -19,4 +19,9 @@ void gpio_config_af(GPIO_TypeDef *port, uint32_t pin, uint32_t af);
 void led_init(void);
 void led_set(int allumee);           /* 0 = eteinte, autre = allumee */
 
+/* Echauffement 2 : DAC1 voie 1, sortie PA4 (0 a 3,3 V) */
+#define DAC_POURCENT_MAX   100
+void dac_init(void);
+void dac_set_percent(int pourcent);  /* 0..100 % de la pleine echelle */
+
 #endif /* PERIPHERIQUES_H */

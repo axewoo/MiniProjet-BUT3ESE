@@ -54,3 +54,38 @@ void led_set(int allumee)
     LED_PORT->BSRR = (1U << (LED_PIN + GPIO_BSRR_RESET_POS));
   }
 }
+
+/*-------------------- Echauffement 2 : DAC1 voie 1 (PA4) -------------------*/
+#define DAC_PORT       GPIOA
+#define DAC_PIN        4U
+#define DAC_VALEUR_MAX 4095U                  /* DAC 12 bits : 4095 = 3,3 V */
+
+/* Ramene une valeur dans l intervalle [min, max]. */
+static int borner(int valeur, int min, int max)
+{
+  if (valeur < min) {
+    return min;
+  }
+  if (valeur > max) {
+    return max;
+  }
+  return valeur;
+}
+
+void dac_init(void)
+{
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+  RCC->APB1ENR |= RCC_APB1ENR_DACEN;
+  (void)RCC->APB1ENR;
+
+  gpio_config_mode(DAC_PORT, DAC_PIN, GPIO_MODE_ANALOG);  /* evite tout conflit */
+  DAC->CR |= DAC_CR_EN1;                      /* voie 1, buffer de sortie actif */
+  dac_set_percent(0);
+}
+
+void dac_set_percent(int pourcent)
+{
+  uint32_t p = (uint32_t)borner(pourcent, 0, DAC_POURCENT_MAX);
+
+  DAC->DHR12R1 = (p * DAC_VALEUR_MAX) / DAC_POURCENT_MAX;  /* 12 bits aligne a droite */
+}

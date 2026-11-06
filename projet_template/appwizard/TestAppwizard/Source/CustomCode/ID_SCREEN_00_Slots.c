@@ -58,6 +58,7 @@ void ID_SCREEN_00__ID_SLIDER_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
   int Val;
   Val = APPW_GetValue(ID_SCREEN_00, ID_SLIDER_00, NULL);
   //Val vaut une valeur entre 0 et 100
+  dac_set_percent(Val);   // 0 % -> 0 V, 100 % -> 3,3 V sur PA4
   //code à exécuter à mettre ici
 }
 

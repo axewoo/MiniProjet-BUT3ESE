@@ -50,6 +50,7 @@ int main(void)
 	**********************************/
 
 	led_init();      // Echauffement 1 : LED LD1 (PI1)
+	dac_init();      // Echauffement 2 : DAC1 voie 1 (PA4)
 
 	//Initialiser vos périphériques ici
 
