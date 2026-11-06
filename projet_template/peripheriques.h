@@ -12,6 +12,14 @@
 #include <stdint.h>
 #include "stm32f7xx.h"
 
+/* Horloge des timers du bus APB1 (TIM2..TIM7, TIM12..TIM14) :
+ * configuration_overclock() regle HCLK = 200 MHz et APB1 = HCLK / 4 = 50 MHz ;
+ * le prescaler APB1 etant different de 1, les timers recoivent 2 x 50 = 100 MHz. */
+#define TIM_APB1_CLK_HZ    100000000U
+
+/* Ramene une valeur dans l intervalle [min, max]. */
+int borner(int valeur, int min, int max);
+
 /* Configure une broche en fonction alternative (AF0..AF15). */
 void gpio_config_af(GPIO_TypeDef *port, uint32_t pin, uint32_t af);
 
@@ -23,5 +31,10 @@ void led_set(int allumee);           /* 0 = eteinte, autre = allumee */
 #define DAC_POURCENT_MAX   100
 void dac_init(void);
 void dac_set_percent(int pourcent);  /* 0..100 % de la pleine echelle */
+
+/* Echauffement 3 : PWM 1 kHz sur TIM3 voie 1, sortie PB4 (Arduino D3) */
+#define PWM_POURCENT_MAX   100
+void pwm_init(void);
+void pwm_set_duty(int pourcent);     /* rapport cyclique 0..100 % */
 
 #endif /* PERIPHERIQUES_H */

@@ -32,6 +32,17 @@ void gpio_config_af(GPIO_TypeDef *port, uint32_t pin, uint32_t af)
   gpio_config_mode(port, pin, GPIO_MODE_AF);
 }
 
+int borner(int valeur, int min, int max)
+{
+  if (valeur < min) {
+    return min;
+  }
+  if (valeur > max) {
+    return max;
+  }
+  return valeur;
+}
+
 /*---------------------- Echauffement 1 : LED LD1 (PI1) ---------------------*/
 #define LED_PORT   GPIOI
 #define LED_PIN    1U
@@ -60,18 +71,6 @@ void led_set(int allumee)
 #define DAC_PIN        4U
 #define DAC_VALEUR_MAX 4095U                  /* DAC 12 bits : 4095 = 3,3 V */
 
-/* Ramene une valeur dans l intervalle [min, max]. */
-static int borner(int valeur, int min, int max)
-{
-  if (valeur < min) {
-    return min;
-  }
-  if (valeur > max) {
-    return max;
-  }
-  return valeur;
-}
-
 void dac_init(void)
 {
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
@@ -88,4 +87,40 @@ void dac_set_percent(int pourcent)
   uint32_t p = (uint32_t)borner(pourcent, 0, DAC_POURCENT_MAX);
 
   DAC->DHR12R1 = (p * DAC_VALEUR_MAX) / DAC_POURCENT_MAX;  /* 12 bits aligne a droite */
+}
+
+/*------------- Echauffement 3 : PWM TIM3 voie 1 (PB4, Arduino D3) ----------*/
+#define PWM_PORT          GPIOB
+#define PWM_PIN           4U
+#define PWM_AF_TIM3       2U                  /* PB4 : AF2 = TIM3_CH1      */
+#define PWM_TICK_HZ       1000000U            /* compteur a 1 MHz (1 us)  */
+#define PWM_FREQ_HZ       1000U               /* periode de 1 ms          */
+#define PWM_PERIODE_TICKS (PWM_TICK_HZ / PWM_FREQ_HZ)
+#define TIM_OCM_PWM1      6U                  /* OCxM = 110 : mode PWM 1  */
+
+void pwm_init(void)
+{
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+  (void)RCC->APB1ENR;
+
+  gpio_config_af(PWM_PORT, PWM_PIN, PWM_AF_TIM3);
+
+  TIM3->PSC  = (TIM_APB1_CLK_HZ / PWM_TICK_HZ) - 1U;   /* 100 MHz / 100 = 1 MHz */
+  TIM3->ARR  = PWM_PERIODE_TICKS - 1U;                 /* 1000 ticks = 1 ms     */
+  TIM3->CCR1 = 0U;
+  TIM3->CCMR1 = (TIM3->CCMR1 & ~(TIM_CCMR1_CC1S | TIM_CCMR1_OC1M))
+              | (TIM_OCM_PWM1 << TIM_CCMR1_OC1M_Pos)
+              | TIM_CCMR1_OC1PE;                       /* CCR1 pris en compte a chaque periode */
+  TIM3->CCER |= TIM_CCER_CC1E;                         /* sortie voie 1 active */
+  TIM3->CR1  |= TIM_CR1_ARPE;
+  TIM3->EGR   = TIM_EGR_UG;                            /* charge PSC et ARR */
+  TIM3->CR1  |= TIM_CR1_CEN;
+}
+
+void pwm_set_duty(int pourcent)
+{
+  uint32_t p = (uint32_t)borner(pourcent, 0, PWM_POURCENT_MAX);
+
+  TIM3->CCR1 = (p * PWM_PERIODE_TICKS) / PWM_POURCENT_MAX;
 }

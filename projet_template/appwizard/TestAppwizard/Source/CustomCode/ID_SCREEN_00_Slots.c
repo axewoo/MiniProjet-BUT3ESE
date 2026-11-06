@@ -22,6 +22,8 @@ Purpose     : AppWizard managed file, function content could be changed
 #include "stm32f7xx.h"                  // Device header
 #include "../../../../peripheriques.h"   // LED, DAC, PWM, ADC (racine du projet Keil)
 
+#define ROTARY_DEMI_COURSE 900            // la mollette donne -900..+900
+
 /*** End of user code area ***/
 
 /*********************************************************************
@@ -70,6 +72,8 @@ void ID_SCREEN_00__ID_ROTARY_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
   int Val;
   Val = APPW_GetValue(ID_SCREEN_00, ID_ROTARY_00, NULL);
   //Val vaut une valeur entre -900 et 900
+  // -900 -> 0 %, 0 -> 50 %, +900 -> 100 % de rapport cyclique
+  pwm_set_duty(((Val + ROTARY_DEMI_COURSE) * PWM_POURCENT_MAX) / (2 * ROTARY_DEMI_COURSE));
   //code à exécuter à mettre ici
 }
 
