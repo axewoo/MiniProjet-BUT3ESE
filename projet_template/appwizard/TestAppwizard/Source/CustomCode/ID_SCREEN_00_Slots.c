@@ -46,6 +46,12 @@ void ID_SCREEN_00__ID_SWITCH_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
   Val = APPW_GetValue(ID_SCREEN_00, ID_SWITCH_00, NULL);
   //Val vaut 0 ou 1
   //code à exécuter à mettre ici
+	if (Val==1){
+	GPIOI->ODR |=(1<<0); // PI0 mis à 1 donc allumer
+	}
+	else{
+	GPIOI->ODR &= ~(1<<0); // PI0 mis à 0 donc éteint
+	}
 }
 
 /*********************************************************************
@@ -53,10 +59,16 @@ void ID_SCREEN_00__ID_SWITCH_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
 *       ID_SCREEN_00__ID_SLIDER_00__WM_NOTIFICATION_VALUE_CHANGED
 */
 void ID_SCREEN_00__ID_SLIDER_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM * pAction, WM_HWIN hScreen, WM_MESSAGE * pMsg, int * pResult) {
-  int Val;
+  int Val,Slider;
   Val = APPW_GetValue(ID_SCREEN_00, ID_SLIDER_00, NULL);
   //Val vaut une valeur entre 0 et 100
   //code à exécuter à mettre ici
+	Slider = (Val/100)*3.3;
+	while(ADC3->SR &=(0<<1))// Vérification de la conversion
+						{
+							
+						}
+	DAC->DHR12R1 = Slider;
 }
 
 /*********************************************************************
@@ -64,10 +76,12 @@ void ID_SCREEN_00__ID_SLIDER_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
 *       ID_SCREEN_00__ID_ROTARY_00__WM_NOTIFICATION_VALUE_CHANGED
 */
 void ID_SCREEN_00__ID_ROTARY_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM * pAction, WM_HWIN hScreen, WM_MESSAGE * pMsg, int * pResult) {
-  int Val;
+  int rC,Val;
+	
   Val = APPW_GetValue(ID_SCREEN_00, ID_ROTARY_00, NULL);
-  //Val vaut une valeur entre -900 et 900
+  //Val vaut une valeur entre -300 et 300
   //code à exécuter à mettre ici
+	rC = (Val/300);
 }
 
 /*********************************************************************
@@ -90,6 +104,7 @@ void ID_SCREEN_00__ID_TIMER_00__APPW_NOTIFICATION_TIMER(APPW_ACTION_ITEM * pActi
   GUI_USE_PARA(hScreen);
   GUI_USE_PARA(pMsg);
   GUI_USE_PARA(pResult);
+	int pot;
 }
 
 /*************************** End of file ****************************/
