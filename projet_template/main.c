@@ -1,5 +1,6 @@
 #include "stm32f7xx.h"                  // Device header
 #include "peripheriques.h"               // LED, DAC, PWM, ADC (seance 1, etudiant B)
+#include "servo.h"                       // servomoteur DM996 sur PF8
 
 extern void configuration_overclock(void);
 extern int Init_GUIThread (void);
@@ -53,6 +54,7 @@ int main(void)
 	dac_init();      // Echauffement 2 : DAC1 voie 1 (PA4)
 	pwm_init();      // Echauffement 3 : PWM 1 kHz TIM3 voie 1 (PB4)
 	adc_init();      // Echauffement 4 : ADC3 voie 0 (PA0), potentiometre
+	servo_init();    // Servo DM996 : PWM 50 Hz TIM13 voie 1 (PF8)
 
 	//Initialiser vos périphériques ici
 
