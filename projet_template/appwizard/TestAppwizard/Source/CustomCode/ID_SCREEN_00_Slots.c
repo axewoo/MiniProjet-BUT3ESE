@@ -97,6 +97,11 @@ void ID_SCREEN_00__ID_TIMER_00__APPW_NOTIFICATION_TIMER(APPW_ACTION_ITEM * pActi
   GUI_USE_PARA(hScreen);
   GUI_USE_PARA(pMsg);
   GUI_USE_PARA(pResult);
+  // La jauge est reglee sur 0..4095 : on lui donne directement la mesure 12 bits
+  APPW_SetValue(ID_SCREEN_00, ID_GAUGE_00, adc_read());
+
+  // ID_TIMER_00 n est pas en "auto restart" : on le relance pour la periode suivante
+  APPW_DoJob(ID_SCREEN_00, ID_TIMER_00, APPW_JOB_START, NULL);
 }
 
 /*************************** End of file ****************************/

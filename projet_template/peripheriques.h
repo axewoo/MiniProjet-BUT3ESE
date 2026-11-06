@@ -37,4 +37,9 @@ void dac_set_percent(int pourcent);  /* 0..100 % de la pleine echelle */
 void pwm_init(void);
 void pwm_set_duty(int pourcent);     /* rapport cyclique 0..100 % */
 
+/* Echauffement 4 : potentiometre sur ADC3 voie 0, entree PA0 (Arduino A0) */
+#define ADC_VALEUR_MAX     4095U             /* ADC 12 bits : 4095 = 3,3 V */
+void adc_init(void);
+uint16_t adc_read(void);             /* 0..4095 (derniere valeur si delai depasse) */
+
 #endif /* PERIPHERIQUES_H */

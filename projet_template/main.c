@@ -52,6 +52,7 @@ int main(void)
 	led_init();      // Echauffement 1 : LED LD1 (PI1)
 	dac_init();      // Echauffement 2 : DAC1 voie 1 (PA4)
 	pwm_init();      // Echauffement 3 : PWM 1 kHz TIM3 voie 1 (PB4)
+	adc_init();      // Echauffement 4 : ADC3 voie 0 (PA0), potentiometre
 
 	//Initialiser vos périphériques ici
 

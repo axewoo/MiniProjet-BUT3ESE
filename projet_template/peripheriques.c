@@ -124,3 +124,44 @@ void pwm_set_duty(int pourcent)
 
   TIM3->CCR1 = (p * PWM_PERIODE_TICKS) / PWM_POURCENT_MAX;
 }
+
+/*------------ Echauffement 4 : ADC3 voie 0 (PA0, Arduino A0) ---------------*/
+#define ADC_PORT           GPIOA
+#define ADC_PIN            0U
+#define ADC_VOIE           0U                 /* ADC3_IN0                   */
+#define ADC_SMP_480_CYCLES 7U                 /* echantillonnage le plus long */
+#define ADC_ATTENTE_MAX    100000U            /* garde-fou sur la fin de conversion */
+
+void adc_init(void)
+{
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+  RCC->APB2ENR |= RCC_APB2ENR_ADC3EN;
+  (void)RCC->APB2ENR;
+
+  gpio_config_mode(ADC_PORT, ADC_PIN, GPIO_MODE_ANALOG);
+
+  /* Horloge ADC = PCLK2 / 4 = 100 MHz / 4 = 25 MHz (36 MHz maximum) */
+  ADC123_COMMON->CCR = (ADC123_COMMON->CCR & ~ADC_CCR_ADCPRE) | ADC_CCR_ADCPRE_0;
+
+  ADC3->CR1   = 0U;                           /* 12 bits, pas de scan        */
+  ADC3->CR2   = 0U;                           /* conversion unique, cadre a droite */
+  ADC3->SMPR2 = (ADC3->SMPR2 & ~ADC_SMPR2_SMP0) | (ADC_SMP_480_CYCLES << ADC_SMPR2_SMP0_Pos);
+  ADC3->SQR1  = 0U;                           /* une seule conversion        */
+  ADC3->SQR3  = ADC_VOIE;                     /* 1re conversion : voie 0     */
+  ADC3->CR2  |= ADC_CR2_ADON;
+}
+
+uint16_t adc_read(void)
+{
+  static uint16_t derniere_valeur = 0U;
+  uint32_t attente = ADC_ATTENTE_MAX;
+
+  ADC3->CR2 |= ADC_CR2_SWSTART;
+  while ((ADC3->SR & ADC_SR_EOC) == 0U) {
+    if (--attente == 0U) {
+      return derniere_valeur;                 /* ne jamais bloquer la carte */
+    }
+  }
+  derniere_valeur = (uint16_t)ADC3->DR;       /* la lecture de DR efface EOC */
+  return derniere_valeur;
+}
