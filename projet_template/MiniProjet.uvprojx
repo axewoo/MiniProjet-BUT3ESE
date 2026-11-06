@@ -404,6 +404,16 @@
               <FileType>1</FileType>
               <FilePath>.\UDP_Socket.c</FilePath>
             </File>
+            <File>
+              <FileName>peripheriques.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\peripheriques.c</FilePath>
+            </File>
+            <File>
+              <FileName>peripheriques.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\peripheriques.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

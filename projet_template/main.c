@@ -1,4 +1,5 @@
 #include "stm32f7xx.h"                  // Device header
+#include "peripheriques.h"               // LED, DAC, PWM, ADC (seance 1, etudiant B)
 
 extern void configuration_overclock(void);
 extern int Init_GUIThread (void);
@@ -47,6 +48,8 @@ int main(void)
 	/**********************************
 	Début Initialisation périphérique
 	**********************************/
+
+	led_init();      // Echauffement 1 : LED LD1 (PI1)
 
 	//Initialiser vos périphériques ici
 

@@ -20,6 +20,7 @@ Purpose     : AppWizard managed file, function content could be changed
 
 /*** Begin of user code area ***/
 #include "stm32f7xx.h"                  // Device header
+#include "../../../../peripheriques.h"   // LED, DAC, PWM, ADC (racine du projet Keil)
 
 /*** End of user code area ***/
 
@@ -45,6 +46,7 @@ void ID_SCREEN_00__ID_SWITCH_00__WM_NOTIFICATION_VALUE_CHANGED(APPW_ACTION_ITEM 
   int Val;
   Val = APPW_GetValue(ID_SCREEN_00, ID_SWITCH_00, NULL);
   //Val vaut 0 ou 1
+  led_set(Val);   // 1 : LED LD1 allumee, 0 : eteinte
   //code à exécuter à mettre ici
 }
 
