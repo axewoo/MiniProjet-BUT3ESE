@@ -16,10 +16,19 @@ extern void Init_Ethernet (void);
 /*----------------------------------------------------------------------------
  *      Tâche de test (vide) : à compléter par les étudiants
  *---------------------------------------------------------------------------*/
+/* Balayage du servo 0 -> 180 -> 0 (jalon de la seance 1).
+ * Mettre TEST_BALAYAGE_SERVO a 0 quand le serveur UDP pilotera le servo,
+ * pour que la tache de test n entre pas en conflit avec les commandes. */
+#define TEST_BALAYAGE_SERVO  1
+#define BALAYAGE_PAS_DEG     5    // 5 degres toutes les 100 ms : 0 -> 180 en 3,6 s
+
 osThreadId_t tid_Test;
 
 static void Thread_Test (void *argument)
 {
+  int angle = SERVO_ANGLE_MIN;
+  int pas   = BALAYAGE_PAS_DEG;
+
   (void)argument;
 
   // Initialisations propres à la tâche (si besoin) ici
@@ -27,6 +36,18 @@ static void Thread_Test (void *argument)
   while (1)
   {
     // Votre boucle de test ici (mesure de distance, balayage du servo, etc.)
+#if TEST_BALAYAGE_SERVO
+    servo_set_angle(angle);   // l angle est affiche par le timer de l ecran
+
+    // demi-tour aux extremites
+    if ((angle + pas > SERVO_ANGLE_MAX) || (angle + pas < SERVO_ANGLE_MIN)) {
+      pas = -pas;
+    }
+    angle += pas;
+#else
+    (void)angle;
+    (void)pas;
+#endif
 
     osDelay(100);   // période de la boucle : 100 ms
   }
