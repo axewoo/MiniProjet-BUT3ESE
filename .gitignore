@@ -1,0 +1,34 @@
+# --- Keil uVision : fichiers generes a la compilation ---
+Objects/
+Listings/
+*.o
+*.d
+*.crf
+*.lst
+*.axf
+*.htm
+*.map
+*.lnp
+*.sct
+*.dep
+*.iex
+*.__i
+*.bak
+*_Target
+
+# --- Keil uVision : preferences locales de chaque utilisateur ---
+*.uvguix.*
+*.uvguix
+JLinkLog.txt
+JLinkSettings.ini
+EventRecorderStub.scvd
+
+# --- Simulation AppWizard (Visual Studio) ---
+appwizard/**/Simulation/Debug/
+appwizard/**/Simulation/Release/
+appwizard/**/Simulation/*.vcxproj.user
+appwizard/**/Simulation/.vs/
+
+# --- Divers ---
+.DS_Store
+Thumbs.db
