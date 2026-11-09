@@ -3,6 +3,8 @@
 ".\objects\configuration.o"
 ".\objects\gui_singlethread.o"
 ".\objects\udp_socket.o"
+".\objects\servo.o"
+".\objects\capteur.o"
 ".\objects\appw_maintask.o"
 ".\objects\appwconf.o"
 ".\objects\id_screen_00.o"

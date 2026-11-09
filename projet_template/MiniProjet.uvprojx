@@ -404,6 +404,16 @@
               <FileType>1</FileType>
               <FilePath>.\UDP_Socket.c</FilePath>
             </File>
+            <File>
+              <FileName>servo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\servo.c</FilePath>
+            </File>
+            <File>
+              <FileName>capteur.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\capteur.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

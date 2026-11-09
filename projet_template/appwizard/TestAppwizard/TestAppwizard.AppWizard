@@ -274,8 +274,8 @@
         Value=0
       </SetValue>
       <SetRange>
-        Min=300
-        Max=300
+        Min=900
+        Max=900
       </SetRange>
       <SetOffset>
         Offset=900
