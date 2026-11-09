@@ -19,19 +19,7 @@ osThreadId_t tid_Test;
 
      static void Thread_Test (void *argument)
      {
-       int angle = 0;
-       int pas = 10;
-
-       (void)argument;
-       while (1)
-       {
-         servo_set_angle(angle);
-         osDelay(200);            // laisser le servo se stabiliser
-         distance_cm();           // la mesure est gardee pour l'affichage
-         if (angle + pas > 180 || angle + pas < 0) pas = -pas;
-         angle = angle + pas;
-         osDelay(60);             // au moins 60 ms entre deux mesures
-       }
+         osDelay(100);             // au moins 100 ms entre deux mesures
      }
 
 static int Init_TestThread (void)
