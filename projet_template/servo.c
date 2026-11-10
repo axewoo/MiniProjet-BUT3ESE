@@ -8,12 +8,8 @@
 // PSC = 99    -> fCNT = 200 MHz / (99 + 1) = 2 MHz, 1 tick = 0,5 us
 // ARR = 39999 -> periode = 40000 x 0,5 us = 20 ms, soit 50 Hz
 //
-// Largeur d'impulsion = CCR1 x 0,5 us :
-//   CCR1 = 2000 -> 1 ms  (0 deg)
-//   CCR1 = 4000 -> 2 ms  (180 deg)
-// A calibrer sur votre servo (le DM996 va souvent de 1000 a 5000, soit 0,5 a 2,5 ms).
-#define SERVO_CCR_MIN  2000   // impulsion a 0 deg
-#define SERVO_CCR_MAX  4000   // impulsion a 180 deg
+#define SERVO_CCR_MIN  1000   // impulsion a 0 deg
+#define SERVO_CCR_MAX  5000   // impulsion a 180 deg
 
 static int angle_courant = 90;
 
