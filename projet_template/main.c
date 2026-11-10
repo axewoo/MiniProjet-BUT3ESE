@@ -17,10 +17,14 @@ extern void Init_Ethernet (void);
  *---------------------------------------------------------------------------*/
 osThreadId_t tid_Test;
 
-     static void Thread_Test (void *argument)
-     {
-         osDelay(100);             // au moins 100 ms entre deux mesures
-     }
+ static void Thread_Test (void *argument)
+ {
+	 (void)argument;
+	 while (1)
+	 {
+		 osDelay(1000);
+	 }
+ }
 
 static int Init_TestThread (void)
 {
@@ -43,6 +47,7 @@ int main(void)
 	
 	RCC->APB1ENR |= (1<<29); //activation DAC
 	RCC->AHB1ENR |= (1<<8) | (1<<0) | (1<<5); // Activation de GPIOI et de GPIOA et de GPIOF
+	RCC->APB2ENR |= (1<<14); // Activation de SYSCFG (interruptions)
 	GPIOI->MODER |= (1<<6); // PI3 en mode Sortie (Output)
 	
 	GPIOA->MODER |= (3<<8); //PA4 en mode  analog

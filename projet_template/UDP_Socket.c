@@ -67,6 +67,10 @@ static void cmd_dist(char *rep)
   }
 }
 
+static void cmd_scan(char *rep)
+{
+	
+}
 // Appelee par le Middleware a chaque datagramme recu.
 // Pas de boucle ici : elle bloquerait la reception.
 uint32_t udp_cb_func (int32_t socket, const NET_ADDR *addr, const uint8_t *buf, uint32_t len) {
