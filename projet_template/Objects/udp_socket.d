@@ -30,6 +30,7 @@
   C:\ARM\Keil\STM32F7xx_DFP\2.16.0\Drivers\STM32F7xx_HAL_Driver\Inc\stm32f7xx_hal_pwr_ex.h \
   C:\ARM\Keil\STM32F7xx_DFP\2.16.0\Drivers\STM32F7xx_HAL_Driver\Inc\stm32f7xx_hal_uart.h \
   C:\ARM\Keil\STM32F7xx_DFP\2.16.0\Drivers\STM32F7xx_HAL_Driver\Inc\stm32f7xx_hal_uart_ex.h \
+  C:\ARM\ARM\CMSIS\6.3.0\CMSIS\RTOS2\Include\cmsis_os2.h \
   C:\ARM\Keil\MDK-Middleware_Graphics\1.3.1\emWin\Include\AppWizard.h \
   C:\ARM\Keil\MDK-Middleware_Graphics\1.3.1\emWin\Include\DIALOG.h \
   C:\ARM\Keil\MDK-Middleware_Graphics\1.3.1\emWin\Include\WM.h \
