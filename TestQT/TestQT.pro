@@ -8,13 +8,18 @@ CONFIG += c++17
 
 SOURCES += \
     main.cpp \
-    interfacescan.cpp
+    interfacescan.cpp \
+    client_udp.c
 
 HEADERS += \
-    interfacescan.h
+    interfacescan.h \
+    client_udp.h
 
 FORMS += \
     interfacescan.ui
+
+# Sockets Windows (Winsock)
+win32: LIBS += -lws2_32
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
