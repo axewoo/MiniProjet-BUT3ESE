@@ -1,16 +1,40 @@
 #include "interfacescan.h"
 #include "ui_interfacescan.h"
-#include "client_udp.h"
+#include "protocole.h"            // udp_decoder_scan() : decoupage de SCAN, en C
 
+#include <QUdpSocket>
+#include <QNetworkDatagram>
+#include <QTimer>
 #include <QTime>
 #include <QHeaderView>
+#include <QRegularExpression>
 
 // Delais d'attente : SCAN dure ~2,5 s cote carte (0 a 180 par pas de 10)
-#define TIMEOUT_CMD_MS   1000
-#define ESSAIS_CMD       3
-#define TIMEOUT_SCAN_MS  5000
-#define ESSAIS_SCAN      2
+#define TIMEOUT_CMD_MS   1000     // ANGLE et DIST : 1 s ...
+#define ESSAIS_CMD       3        // ... et 3 envois au maximum
+#define TIMEOUT_SCAN_MS  5000     // SCAN : 5 s ...
+#define ESSAIS_SCAN      2        // ... et 2 envois au maximum
 #define MAX_MESURES      64
+
+/*------------------------------------------------------------------------------
+ * Principe (QUdpSocket, sans thread)
+ *
+ * Avec Winsock, recvfrom() bloquait : il fallait un thread pour que la
+ * fenetre ne se fige pas. QUdpSocket fonctionne autrement, par SIGNAUX :
+ *   1) envoyer()      : on cree un QUdpSocket, on envoie la commande avec
+ *                       writeDatagram() et on lance un QTimer (delai d'attente).
+ *                       La fonction se termine tout de suite : la fenetre
+ *                       reste reactive.
+ *   2) lireReponse()  : appelee par Qt (signal readyRead) quand un datagramme
+ *                       arrive. On arrete le minuteur et on affiche la reponse.
+ *   3) delaiDepasse() : appelee par Qt (signal timeout du QTimer) si rien
+ *                       n'est arrive a temps. UDP peut perdre un datagramme :
+ *                       on renvoie la commande, ou on abandonne apres le
+ *                       dernier essai.
+ * Un socket par requete : une reponse tres en retard d'une ancienne requete
+ * arrive sur un socket deja ferme et ne peut pas etre prise pour la reponse
+ * a la commande suivante.
+ *----------------------------------------------------------------------------*/
 
 InterfaceScan::InterfaceScan(QWidget *parent)
     : QDialog(parent)
@@ -23,18 +47,17 @@ InterfaceScan::InterfaceScan(QWidget *parent)
     connect(ui->btnDist,  &QPushButton::clicked, this, &InterfaceScan::cliqueDist);
     connect(ui->btnScan,  &QPushButton::clicked, this, &InterfaceScan::cliqueScan);
 
-    if (udp_init() < 0) log("Erreur : initialisation du reseau impossible");
+    // Minuteur du delai d'attente : un seul declenchement par envoi
+    minuteur = new QTimer(this);
+    minuteur->setSingleShot(true);
+    connect(minuteur, &QTimer::timeout, this, &InterfaceScan::delaiDepasse);
 }
 
 InterfaceScan::~InterfaceScan()
 {
-    // fermeture propre : on attend la fin de la requete en cours,
-    // qui ferme son socket (au plus TIMEOUT x ESSAIS)
-    if (thread_reseau) {
-        thread_reseau->wait();
-        delete thread_reseau;
-    }
-    udp_quitter();
+    // Fermeture propre : le socket en cours (s'il y en a un) est ferme.
+    // (il serait aussi detruit avec la fenetre, dont il est l'enfant)
+    terminerRequete();
     delete ui;
 }
 
@@ -56,48 +79,114 @@ void InterfaceScan::cliqueScan()
             TIMEOUT_SCAN_MS, ESSAIS_SCAN);
 }
 
-// Lance la requete dans un thread : udp_requete() bloque pendant l'attente,
-// la fenetre doit rester reactive. Le resultat revient dans reponseRecue(),
-// executee dans le thread de l'interface.
+// 1) Prepare et lance une requete UDP
 void InterfaceScan::envoyer(const QString &cmd, int timeout_ms, int essais)
 {
+    // Adresse saisie dans l'interface (rien en dur). On exige 4 nombres
+    // separes par des points (setAddress() seul accepterait "1.2.3"),
+    // puis setAddress() verifie que chaque nombre vaut au plus 255.
     QString texte_ip = ui->lineEditIP->text().trimmed();
-    if (texte_ip.isEmpty()) {
-        log("Erreur : saisir l'adresse IP du routeur");
+    static const QRegularExpression format_ip("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
+    if (!format_ip.match(texte_ip).hasMatch() || !adresse_carte.setAddress(texte_ip)) {
+        log("Erreur : adresse IP invalide (ex. 192.168.184.170)");
         return;
     }
-    QByteArray ip  = texte_ip.toLatin1();
-    QByteArray c   = cmd.toLatin1();
-    unsigned short port = (unsigned short)ui->spinPort->value();
+    port_carte = (quint16)ui->spinPort->value();
+
+    // Le protocole demande une commande ASCII terminee par \n
+    commande = cmd.toLatin1() + "\n";
+    essais_restants = essais;
+    minuteur->setInterval(timeout_ms);
+
+    // Nouveau socket pour cette requete. bind() sur AnyIPv4, port 0 : le
+    // systeme choisit notre port source, c'est la que la carte repondra
+    // (elle repond a l'adresse et au port de l'expediteur).
+    socket = new QUdpSocket(this);
+    if (!socket->bind(QHostAddress::AnyIPv4, 0)) {
+        log("Erreur : impossible d'ouvrir le socket UDP (" + socket->errorString() + ")");
+        terminerRequete();
+        return;
+    }
+    // readyRead est emis par Qt chaque fois qu'un datagramme arrive
+    connect(socket, &QUdpSocket::readyRead, this, &InterfaceScan::lireReponse);
+    connect(socket, &QUdpSocket::errorOccurred, this, &InterfaceScan::erreurSocket);
 
     setOccupe(true);
     log("> " + cmd);
-
-    thread_reseau = QThread::create([this, ip, c, port, cmd, timeout_ms, essais]() {
-        char rep[1500];             // un datagramme tient dans 1500 octets
-        int n = udp_requete(ip.constData(), port, c.constData(),
-                            rep, sizeof(rep), timeout_ms, essais);
-        QString texte = (n >= 0) ? QString::fromLatin1(rep) : QString();
-        // retour dans le thread de l'interface (on ne touche pas aux widgets ici)
-        QMetaObject::invokeMethod(this, [this, cmd, n, texte]() {
-            reponseRecue(cmd, n, texte);
-        }, Qt::QueuedConnection);
-    });
-    thread_reseau->start();
+    envoyerDatagramme();
 }
 
-void InterfaceScan::reponseRecue(const QString &cmd, int code, const QString &rep)
+// Envoie la commande (premier envoi ou nouvel essai) et relance le minuteur
+void InterfaceScan::envoyerDatagramme()
 {
-    thread_reseau->wait();          // le thread a fini (socket ferme)
-    delete thread_reseau;
-    thread_reseau = nullptr;
-    setOccupe(false);
-
-    if (code < 0) {
-        log(QString("Erreur : ") + udp_erreur_texte(code));
+    essais_restants--;
+    // writeDatagram() = sendto() de Winsock : un datagramme vers adresse:port
+    if (socket->writeDatagram(commande, adresse_carte, port_carte) != commande.size()) {
+        log("Erreur : envoi impossible (" + socket->errorString() + ")");
+        terminerRequete();
         return;
     }
-    if (cmd.startsWith("SCAN") && !rep.startsWith("ERR")) {
+    minuteur->start();
+}
+
+// 2) Un ou plusieurs datagrammes sont arrives sur le socket
+void InterfaceScan::lireReponse()
+{
+    while (socket && socket->hasPendingDatagrams()) {
+        // receiveDatagram() = recvfrom() : donnees + adresse et port de l'expediteur
+        QNetworkDatagram datagramme = socket->receiveDatagram();
+
+        // On ignore un datagramme qui ne vient pas de la carte (adresse et port vises)
+        if (!datagramme.senderAddress().isEqual(adresse_carte, QHostAddress::ConvertV4MappedToIPv4)
+            || datagramme.senderPort() != port_carte) {
+            continue;
+        }
+
+        // Bonne reponse : on arrete d'attendre, on ferme le socket, on affiche
+        QString reponse = QString::fromLatin1(datagramme.data());
+        terminerRequete();
+        traiterReponse(reponse);
+        return;
+    }
+}
+
+// 3) Pas de reponse dans le delai : la commande ou la reponse a ete perdue
+void InterfaceScan::delaiDepasse()
+{
+    if (essais_restants > 0) {
+        log("  pas de reponse, nouvel essai...");
+        envoyerDatagramme();
+    } else {
+        terminerRequete();
+        log("Erreur : pas de reponse de la carte (delai depasse)");
+    }
+}
+
+// Erreur signalee par le socket. Sous Windows, si personne n'ecoute sur le
+// port vise, un message ICMP "port inaccessible" revient et Qt le signale
+// ici (ConnectionRefusedError). On l'affiche, et on laisse le minuteur
+// decider d'un nouvel essai.
+void InterfaceScan::erreurSocket()
+{
+    if (socket) log("  socket : " + socket->errorString());
+}
+
+// Fin de requete (reponse recue, abandon ou fermeture de la fenetre) :
+// minuteur arrete, socket ferme et libere, boutons de nouveau actifs
+void InterfaceScan::terminerRequete()
+{
+    minuteur->stop();
+    if (socket) {
+        socket->close();         // = closesocket()
+        socket->deleteLater();   // detruit par Qt une fois le signal en cours fini
+        socket = nullptr;
+    }
+    setOccupe(false);
+}
+
+void InterfaceScan::traiterReponse(const QString &rep)
+{
+    if (commande.startsWith("SCAN") && !rep.startsWith("ERR")) {
         afficherScan(rep);
     } else {
         log("< " + rep.trimmed());  // OK, DIST 23.4, ERR ...
@@ -108,10 +197,10 @@ void InterfaceScan::afficherScan(const QString &rep)
 {
     Mesure tab[MAX_MESURES];
     QByteArray r = rep.toLatin1();
-    int n = udp_decoder_scan(r.constData(), tab, MAX_MESURES);
+    int n = udp_decoder_scan(r.constData(), tab, MAX_MESURES);   // fonction C
 
     if (n < 0) {
-        log(QString("Erreur : ") + udp_erreur_texte(n));
+        log("Erreur : reponse SCAN mal formee");
         return;
     }
     ui->tableMesures->setRowCount(n);

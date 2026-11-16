@@ -1,7 +1,7 @@
 /*------------------------------------------------------------------------------
  * Test du client UDP sans interface (seance 3, etudiant A)
  * Compilation (MinGW de Qt, dans le dossier TestQT) :
- *   gcc test_client.c client_udp.c -o test_client.exe -lws2_32
+ *   gcc test_client.c client_udp.c protocole.c -o test_client.exe -lws2_32
  * Lancement :
  *   test_client <IP> <port> "ANGLE 45"
  *   test_client <IP> <port> DIST
