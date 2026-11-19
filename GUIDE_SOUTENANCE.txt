@@ -1,0 +1,116 @@
+Guide soutenance : redirection de port et client Qt (QUdpSocket)
+=================================================================
+
+Contenu de la branche
+  projet_template/   projet Keil de la carte, cablage du sujet :
+                     servo PF8 (TIM13_CH1, AF9), TRIG PB14, ECHO PG6, UDP port 5000
+  TestQT/            appli Qt "InterfaceScan", version QUdpSocket
+                     (protocole.c = decoupage de SCAN en C ;
+                      client_udp.c + test_client.c = client C Winsock, test console)
+  Powershell_nc/     udp_test.ps1 : client de test sans netcat (Windows)
+  Executable pret a lancer : "Radar QtApp vQUdpSocket.zip" sur la branche main
+  (dezipper, lancer TestQT.exe).
+
+
+1) Chemin d'un paquet (a savoir dire)
+-------------------------------------
+  PC (WAN)  --UDP-->  IP WAN du routeur : 8000  --redirection-->  IP LAN carte : 5000
+  La carte repond a l'adresse source recue ; le routeur retraduit au retour,
+  le PC voit la reponse venir de IP WAN:8000.
+  Port externe (8000) different du port interne (5000) : preuve que le
+  routeur traduit bien le port.
+
+
+2) Configurer le routeur RV215W (depuis la Raspberry Pi, cote LAN)
+------------------------------------------------------------------
+  a) Ouvrir l'interface web du routeur (adresse LAN du routeur, ex. 192.168.1.1),
+     se connecter avec les identifiants du poste.
+  b) Reservation DHCP : Networking > LAN > Static DHCP
+       MAC   = celle de Net_Config_ETH_0.h (unique, differente des autres groupes)
+       IP    = l'IP que la carte affiche a l'ecran (ex. 192.168.1.100)
+     Enregistrer, redemarrer la carte : elle doit afficher la meme IP.
+  c) Redirection : Firewall > Single Port Forwarding, ajouter une ligne :
+       Application   : RADAR
+       External Port : 8000
+       Internal Port : 5000
+       Protocol      : UDP          <- pas TCP, piege classique
+       IP Address    : IP de la carte (celle reservee en b)
+       Enable        : coche
+     Save.
+  d) Relever l'IP WAN du routeur (Status > System Summary, ou sur l'etiquette du poste).
+
+  Pourquoi la reservation : la regle pointe vers une IP LAN fixe. Sans
+  reservation, apres un redemarrage la carte peut changer d'IP et la regle
+  envoie les paquets vers une adresse vide.
+
+
+3) Tester par couches avant le Qt
+---------------------------------
+  1. Sans reseau : la carte bouge le servo et affiche la distance a l'ecran.
+  2. Cote LAN (Raspberry Pi) : vise directement la carte, sans le routeur
+       echo "ANGLE 45" | nc -u -w1 <IP carte> 5000      -> OK
+       echo "DIST"     | nc -u -w1 <IP carte> 5000      -> DIST 23.4
+  3. Cote WAN (PC), a travers la redirection :
+       powershell -ExecutionPolicy Bypass -File Powershell_nc\udp_test.ps1 <IP WAN> 8000
+       puis taper : ANGLE 90 / DIST / SCAN 0 180 10
+  4. Wireshark sur le PC (filtre : udp.port == 8000) : la requete part-elle,
+     la reponse revient-elle ?
+  Si 2 marche et 3 non : c'est la regle du routeur (protocole, ports, IP)
+  ou le pare-feu Windows du PC.
+
+
+4) Client Qt (QUdpSocket)
+-------------------------
+  Lancer : soit TestQT.exe du zip, soit ouvrir TestQT/TestQT.pro dans
+  Qt Creator (Qt 6, kit MinGW 64 bits), Build puis Run.
+  Dans la fenetre :
+    Adresse IP = IP WAN du routeur      Port = 8000 (port EXTERNE)
+    ANGLE : choisir l'angle, "Orienter (ANGLE)" -> OK dans le journal
+    DIST  : "Mesurer (DIST)"                    -> DIST 23.4 ou DIST TIMEOUT
+    SCAN  : debut / fin / pas, "Balayer (SCAN)" -> tableau angle / distance
+  Les erreurs (IP invalide, pas de reponse, ERR ... de la carte) s'affichent
+  dans le journal en bas de la fenetre.
+
+  Fonctionnement (interfacescan.cpp), a savoir expliquer :
+    envoyer()          cree un QUdpSocket, bind(AnyIPv4, 0) : le systeme
+                       choisit le port source, la carte repondra dessus ;
+                       writeDatagram() (= sendto) puis lance un QTimer.
+                       La fonction rend la main : la fenetre ne se fige pas.
+    lireReponse()      appelee par le signal readyRead ; receiveDatagram()
+                       (= recvfrom) ; on ignore ce qui ne vient pas de IP:port vises.
+    delaiDepasse()     appelee par le QTimer : UDP a perdu la commande ou la
+                       reponse -> nouvel essai, puis abandon avec un message.
+                       ANGLE / DIST : 1 s x 3 essais ; SCAN : 5 s x 2 (SCAN dure ~2,5 s).
+    terminerRequete()  arrete le minuteur, close() du socket (= closesocket).
+    afficherScan()     appelle udp_decoder_scan() de protocole.c (C) : lignes
+                       "<angle> <cm>" jusqu'a END, TIMEOUT stocke en -1.
+  Un socket par requete : une reponse tres en retard d'une vieille commande
+  arrive sur un socket deja ferme, elle ne peut pas etre confondue.
+
+  Winsock vs QUdpSocket : avec Winsock, recvfrom() bloque, il fallait un
+  thread. QUdpSocket est asynchrone (signaux) : pas de thread. Le module
+  C client_udp.c (Winsock) reste dans TestQT/ pour le test console :
+    gcc test_client.c client_udp.c protocole.c -o test_client -lws2_32
+
+
+5) Pannes frequentes
+--------------------
+  Pas de reponse depuis le PC, OK depuis la Raspberry -> regle en TCP au lieu
+      d'UDP, mauvais port interne (doit etre 5000), mauvaise IP de carte,
+      ou pare-feu Windows (autoriser TestQT.exe / powershell).
+  Plus rien apres redemarrage de la carte -> IP changee : verifier la
+      reservation DHCP et la MAC.
+  "ERR OCCUPE"     -> un SCAN est en cours, attendre ~3 s.
+  "DIST TIMEOUT"   -> pas d'echo (cible trop loin / trop pres) ou
+      interrupteur PG6 de la carte d'extension pas au neutre.
+  La carte redemarre quand le servo bouge -> alimentation externe du servo,
+      masse commune.
+
+
+6) Ordre de la demo
+-------------------
+  1. Montrer la carte (IP affichee) et la regle du routeur.
+  2. Qt : IP WAN + 8000, ANGLE 0 puis 180, DIST face a un obstacle.
+  3. SCAN 0 180 10 : le tableau se remplit.
+  4. Robustesse : ANGLE 200 -> ERR HORS PLAGE, IP fausse -> delai puis
+     message d'erreur, la fenetre reste utilisable.
