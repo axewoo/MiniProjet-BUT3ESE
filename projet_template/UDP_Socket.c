@@ -23,7 +23,7 @@
 #include "servo.h"
 #include "capteur.h"
 
-#define UDP_PORT     6969     // port du service sur la carte
+#define UDP_PORT     5000     // port du service sur la carte (impose par le sujet)
 #define TAILLE_CMD   64       // taille max d'une commande recue
 #define TAILLE_REP   64       // taille max d'une reponse courte
 #define ANGLE_MIN    0

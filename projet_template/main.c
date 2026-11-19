@@ -52,18 +52,12 @@ int main(void)
 	
 	GPIOA->MODER |= (3<<8); //PA4 en mode  analog
 	DAC->CR |= (1<<0); // Activation du canal sortie 1 PA4
-	//----------------PWM-----------------------------------
-	RCC->APB2ENR |=	(1<<17); // Activation TIM10
-	GPIOF->AFR[0] |= (3<<24); // PF6 en mode AF3 (TIM10_CH1)
-	
-	TIM10->CCMR1 |= (6<<4); //TIM10_CH1 en PWM mode 1
-	TIM10->CCER |= (1<<0); //connecte OC1 à TIM10_CH1
-	
+	//----------------Servo (PF8/TIM13) et capteur (PB14/PG6)------
 	servo_init();
 	capteur_init();
 	//----------------------------------------------------------------
 	RCC->APB2ENR |=(1<<10); // Activation ADC3
-	GPIOF->MODER |= (3<<20) | (2<<12); // PF10 Analog mode |PF6 en AF mode 
+	GPIOF->MODER |= (3<<20); // PF10 Analog mode (potentiometre)
 	ADC3->SQR3 |= (8<<0); // Utilisation de ADC3_IN8
 	/**********************************
 	Fin Initialisation périphérique
